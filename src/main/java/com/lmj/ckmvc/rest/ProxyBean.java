@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.lmj.ckmvc.constant.CanalFieldEnum;
 import com.lmj.ckmvc.constant.CanalTypeEnum;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.cglib.proxy.MethodInterceptor;
-import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -39,30 +39,35 @@ public class ProxyBean implements MethodInterceptor {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        final Object[] args = invocation.getArguments();
+        final Method method = invocation.getMethod();
+
         final Set<CanalTypeEnum> canalTypeEnums = HANDLE_TYPE.get(method);
         if (CollectionUtils.isEmpty(canalTypeEnums)) {
-            return methodProxy.invokeSuper(o, args);
+            return invocation.proceed();
         }
 
+        //get msgContent
         String rawMsg = null;
-        if (args[0] instanceof ConsumerRecord) {
-            rawMsg = ((ConsumerRecord<String, String>) args[0]).value();
-        } else if (args[0] instanceof List) {
-            rawMsg = ((List<String>) args[0]).get(0);
+        for (Object arg : args) {
+            if (arg instanceof ConsumerRecord) {
+                rawMsg = ((ConsumerRecord<String, String>) arg).value();
+                break;
+            } else if (arg instanceof List) {
+                rawMsg = ((List<String>) arg).get(0);
+                break;
+            }
         }
-
         Assert.notNull(rawMsg, "unSupport assignment for:" + args[0].getClass());
-
 
         if (StringUtils.isEmpty(rawMsg)) {
             paramAck(args);
             return null;
         }
 
-        JsonNode rowData = MAPPER.readTree(rawMsg);
-
         // handleType filter
+        JsonNode rowData = MAPPER.readTree(rawMsg);
         String handleType = rowData.get(CanalFieldEnum.TYPE.getKey()).asText();
         if (!canalTypeEnums.contains(CanalTypeEnum.fromType(handleType))) {
             paramAck(args);
@@ -77,16 +82,22 @@ public class ProxyBean implements MethodInterceptor {
             return null;
         }
 
-        if (args[0] instanceof List) {
-            final String className = ((ParameterizedTypeImpl) method.getGenericParameterTypes()[0])
-                    .getActualTypeArguments()[0]
-                    .getTypeName();
+        // param parse
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof CanalTypeEnum) {
+                args[i] = CanalTypeEnum.fromType(handleType);
+            }
+            if (args[i] instanceof List) {
+                final String className = ((ParameterizedTypeImpl) method.getGenericParameterTypes()[0])
+                        .getActualTypeArguments()[0]
+                        .getTypeName();
 
-            args[0] = MAPPER.convertValue(rowData.get(CanalFieldEnum.DATA.getKey()),
-                    MAPPER.getTypeFactory().constructCollectionType(List.class, Class.forName(className)));
+                args[i] = MAPPER.convertValue(rowData.get(CanalFieldEnum.DATA.getKey()),
+                        MAPPER.getTypeFactory().constructCollectionType(List.class, Class.forName(className)));
+            }
         }
 
-        return methodProxy.invokeSuper(o, args);
+        return invocation.proceed();
     }
 
     private void paramAck(Object[] args) {

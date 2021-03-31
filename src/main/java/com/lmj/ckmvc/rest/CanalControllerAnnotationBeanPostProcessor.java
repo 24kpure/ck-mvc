@@ -20,6 +20,7 @@ import com.lmj.ckmvc.annotation.CanalController;
 import com.lmj.ckmvc.constant.CanalTypeEnum;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.framework.Advised;
+import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -377,6 +378,12 @@ public class CanalControllerAnnotationBeanPostProcessor<K, V>
 
     private void processMultiMethodListeners(CanalController classLevelListener, List<Method> multiMethods,
                                              Object bean, String beanName) {
+        //proxy factory
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.setTarget(bean);//设置代理目标
+        proxyFactory.addAdvice(new ProxyBean());//设置增强
+        Object proxyBean = proxyFactory.getProxy();
+
         for (Method method : multiMethods) {
             Method checked = checkProxy(method, bean);
             MappingConfig requestMapping = findRequestMapping(method);
@@ -388,11 +395,6 @@ public class CanalControllerAnnotationBeanPostProcessor<K, V>
                     .map(CanalTypeEnum::fromType)
                     .collect(Collectors.toSet());
 
-            //proxyBean
-            Enhancer enhancer = new Enhancer();
-            enhancer.setSuperclass(bean.getClass());
-            enhancer.setCallback(new ProxyBean());
-            Object proxyBean = enhancer.create();
 
             ProxyBean.register(method, handleTypeSet, requestMapping.getPathSet());
 

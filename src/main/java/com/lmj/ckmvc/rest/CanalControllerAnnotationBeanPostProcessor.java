@@ -36,7 +36,6 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.Scope;
-import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.context.expression.StandardBeanExpressionResolver;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.MethodParameter;
@@ -380,8 +379,8 @@ public class CanalControllerAnnotationBeanPostProcessor<K, V>
                                              Object bean, String beanName) {
         //proxy factory
         ProxyFactory proxyFactory = new ProxyFactory();
-        proxyFactory.setTarget(bean);//设置代理目标
-        proxyFactory.addAdvice(new ProxyBean());//设置增强
+        proxyFactory.setTarget(bean);
+        proxyFactory.addAdvice(new ProxyBean());
         Object proxyBean = proxyFactory.getProxy();
 
         for (Method method : multiMethods) {

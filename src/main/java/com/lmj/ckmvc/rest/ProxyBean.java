@@ -1,8 +1,6 @@
 package com.lmj.ckmvc.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.lmj.ckmvc.constant.CanalFieldEnum;
 import com.lmj.ckmvc.constant.CanalTypeEnum;
 import org.aopalliance.intercept.MethodInterceptor;
@@ -20,18 +18,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.lmj.ckmvc.rest.DeserializeUtils.MAPPER;
+
 /**
  * @Author: lmj
  * @Description:
  * @Date: Create in 4:11 下午 2021/3/26
  **/
 public class ProxyBean implements MethodInterceptor {
-
-    private final static ObjectMapper MAPPER = new ObjectMapper();
-
-    static {
-        MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
-    }
 
     private final static Map<Method, Set<CanalTypeEnum>> HANDLE_TYPE = new ConcurrentHashMap<>(16);
 

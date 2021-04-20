@@ -8,12 +8,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * canal 数据中的数据库操作类型
- *
- * @author chenjintian
- * @date 2019/08/27
- */
+
 public enum CanalTypeEnum {
 
     /**
@@ -29,7 +24,13 @@ public enum CanalTypeEnum {
     /**
      * 删除操作
      */
-    DELETE("DELETE", "删除操作", RequestMethod.DELETE);
+    DELETE("DELETE", "删除操作", RequestMethod.DELETE),
+
+    /**
+     * 查询操作
+     */
+    SELECT("SELECT", "查询操作", RequestMethod.GET)
+    ;
 
     private String key;
 

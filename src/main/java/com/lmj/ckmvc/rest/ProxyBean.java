@@ -10,11 +10,13 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestParam;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,9 +29,9 @@ import static com.lmj.ckmvc.rest.DeserializeUtils.MAPPER;
  **/
 public class ProxyBean implements MethodInterceptor {
 
-    private final static Map<Method, Set<CanalTypeEnum>> HANDLE_TYPE = new ConcurrentHashMap<>(16);
+    private final static Map<Method, Set<CanalTypeEnum>> HANDLE_TYPE = new ConcurrentHashMap<>(256);
 
-    private final static Map<Method, Set<String>> TABLE_NAME_MAP = new ConcurrentHashMap<>(16);
+    private final static Map<Method, Set<String>> TABLE_NAME_MAP = new ConcurrentHashMap<>(256);
 
     @Override
     @SuppressWarnings("unchecked")
@@ -82,12 +84,21 @@ public class ProxyBean implements MethodInterceptor {
                 args[i] = CanalTypeEnum.fromType(handleType);
             }
             if (args[i] instanceof List) {
-                final String className = ((ParameterizedTypeImpl) method.getGenericParameterTypes()[0])
+                final String className = ((ParameterizedTypeImpl) method.getGenericParameterTypes()[i])
                         .getActualTypeArguments()[0]
                         .getTypeName();
 
-                args[i] = MAPPER.convertValue(rowData.get(CanalFieldEnum.DATA.getKey()),
+                //distinguish dataType
+                final RequestParam requestParam = method.getParameters()[i].getAnnotation(RequestParam.class);
+                final CanalFieldEnum dataType = Objects.isNull(requestParam) ? CanalFieldEnum.DATA :
+                        CanalFieldEnum.map(requestParam.value());
+
+                args[i] = MAPPER.convertValue(rowData.get(dataType.getKey()),
                         MAPPER.getTypeFactory().constructCollectionType(List.class, Class.forName(className)));
+                if (CanalFieldEnum.DATA.equals(dataType) && CollectionUtils.isEmpty((List) args[i])) {
+                    paramAck(args);
+                    return null;
+                }
             }
         }
 

@@ -18,6 +18,7 @@ package com.lmj.ckmvc.rest;
 
 import com.lmj.ckmvc.annotation.CanalController;
 import com.lmj.ckmvc.constant.CanalTypeEnum;
+import lombok.Data;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.ProxyFactory;
@@ -60,7 +61,7 @@ import org.springframework.kafka.listener.KafkaListenerErrorHandler;
 import org.springframework.kafka.support.KafkaNull;
 import org.springframework.kafka.support.TopicPartitionOffset;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.converter.AbstractMessageConverter;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.handler.annotation.support.DefaultMessageHandlerMethodFactory;
 import org.springframework.messaging.handler.annotation.support.HeaderMethodArgumentResolver;
@@ -71,6 +72,7 @@ import org.springframework.messaging.handler.annotation.support.PayloadMethodArg
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
 import org.springframework.messaging.handler.invocation.InvocableHandlerMethod;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.Validator;
@@ -300,36 +302,13 @@ public class CanalControllerAnnotationBeanPostProcessor<K, V>
         return listeners;
     }
 
+    @Data
     private class MappingConfig {
         private Set<String> pathSet;
 
         private String name;
 
         private Set<RequestMethod> requestMethodSet;
-
-        public Set<String> getPathSet() {
-            return pathSet;
-        }
-
-        public void setPathSet(Set<String> pathSet) {
-            this.pathSet = pathSet;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public Set<RequestMethod> getRequestMethodSet() {
-            return requestMethodSet;
-        }
-
-        public void setRequestMethodSet(Set<RequestMethod> requestMethodSet) {
-            this.requestMethodSet = requestMethodSet;
-        }
     }
 
     private MappingConfig findRequestMapping(Method method) {
@@ -394,6 +373,11 @@ public class CanalControllerAnnotationBeanPostProcessor<K, V>
                     .map(CanalTypeEnum::fromType)
                     .collect(Collectors.toSet());
 
+            if (CollectionUtils.isEmpty(handleTypeSet)) {
+                handleTypeSet.add(CanalTypeEnum.DELETE);
+                handleTypeSet.add(CanalTypeEnum.INSERT);
+                handleTypeSet.add(CanalTypeEnum.UPDATE);
+            }
 
             ProxyBean.register(method, handleTypeSet, requestMapping.getPathSet());
 
@@ -667,14 +651,21 @@ public class CanalControllerAnnotationBeanPostProcessor<K, V>
 
     }
 
-    private class CanalListSmartConvert extends MappingJackson2MessageConverter {
+    private class CanalListSmartConvert extends AbstractMessageConverter {
+        @Override
+        protected boolean supports(Class<?> clazz) {
+            return List.class.equals(clazz) || CanalTypeEnum.class.equals(clazz);
+        }
+
         @Override
         protected Object convertFromInternal(Message<?> message, Class<?> targetClass, Object conversionHint) {
             if (List.class.equals(targetClass)) {
                 //protect class can't get rawType,just toJson
                 return Collections.singletonList(message.getPayload());
             }
-            return super.convertFromInternal(message, targetClass, conversionHint);
+
+            //proxyBean adapt
+            return CanalTypeEnum.SELECT;
         }
     }
 

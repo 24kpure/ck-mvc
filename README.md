@@ -43,6 +43,14 @@ public class TestConsumer {
         acknowledgment.acknowledge();
     }
 
+    @RequestMapping(value = "tableName",  name = "consumerGroupId5")
+    public void onMessage2(CanalTypeEnum handleType, @RequestParam(CanalDataType.BEFORE) List<BusinessDTO> businessDTOList,
+        @RequestParam(CanalDataType.AFTER) List<BusinessDTO> businessDTOList, Acknowledgment acknowledgment) {
+        System.out.println("update operation");
+        acknowledgment.acknowledge();
+    }
+
+
     private class BusinessDTO {
         private String id;
 

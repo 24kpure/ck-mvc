@@ -1,6 +1,7 @@
 package com.lmj.ckmvc.rest;
 
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
@@ -17,6 +18,7 @@ public class DeserializeUtils {
 
     static {
         MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+        MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         MAPPER.addHandler(new DeserializationProblemHandler() {
             @Override
             public Object handleWeirdStringValue(DeserializationContext ctxt, Class<?> targetType, String valueToConvert,
@@ -27,5 +29,9 @@ public class DeserializeUtils {
                 return super.handleWeirdStringValue(ctxt, targetType, valueToConvert, failureMsg);
             }
         });
+    }
+
+    public static void main(String[] args) {
+
     }
 }
